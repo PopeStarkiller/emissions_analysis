@@ -155,8 +155,10 @@ def min_int(df,column):
     return (min_, max_)  
 
 def merged_df(country):
-
-    export_df, import_df = sql_to_spark_trade(country)
+    if country == "United States":
+        export_df, import_df = sql_to_spark_trade("USA")
+    else:
+        export_df, import_df = sql_to_spark_trade(country)
     export_df_min, export_df_max = min_int(export_df, 'year')
     import_df_min, import_df_max = min_int(import_df, 'year')
 
