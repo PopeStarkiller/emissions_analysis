@@ -1,6 +1,7 @@
 import os
 import config
-v1, v2, v3 = config.spark_env("msi")
+import platform
+v1, v2, v3 = config.spark_env(platform.node())
 os.environ['SPARK_VERSION'] = v1
 os.environ['JAVA_HOME'] = v2
 os.environ['SPARK_HOME'] = v3
@@ -19,12 +20,21 @@ import pandas as pd
 from pyspark.sql.types import IntegerType,BooleanType,DateType
 from pyspark.sql.functions import col
 from pyspark.sql import Row
-from pyspark.sql.functions import array, col, explode, lit, struct
+from pyspark.sql.functions import array, col, explode, lit, struct, log
 from pyspark.sql import DataFrame
 from typing import Iterable
 import numpy as np
+import spark_functions
+import tensorflow as tf
+import keras.metrics
+import pyspark.sql.functions as F
+import math
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
 rds_string = config.rds_string
 engine = create_engine(f'postgresql://{rds_string}')
+conn = engine.connect()
 metadata = MetaData(engine)
 
 
@@ -210,7 +220,29 @@ def merged_df(country):
         ) \
     .distinct()
     final_merged_spark = final_merged_spark.orderBy(final_merged_spark.year.asc())
-    return final_merged_spark
+    df = final_merged_spark
+    df = df.withColumn("annual_co2_emissions_tonnes_log", F.log10(col("annual_co2_emissions_tonnes")))
+    df = df.withColumn("import_trade_sum_usd_log", F.log10(col("import_trade_sum_usd")))
+    df = df.withColumn("import_weight_sum_kg_log", F.log10(col("import_weight_sum_kg")))
+    df = df.withColumn("import_quantity_sum_log", F.log10(col("import_quantity_sum")))
+    df = df.withColumn("export_trade_sum_usd_log", F.log10(col("export_trade_sum_usd")))
+    df = df.withColumn("export_weight_sum_kg_log", F.log10(col("export_weight_sum_kg")))
+    df = df.withColumn("export_quantity_sum_log", F.log10(col("export_quantity_sum")))
+    df = df.select('country',
+                    'year',
+                    'gdp',
+                    'annual_co2_emissions_tonnes_log',
+                    'import_trade_sum_usd_log',
+                    'import_weight_sum_kg_log',
+                    'import_quantity_sum_log',
+                    'export_trade_sum_usd_log',
+                    'export_weight_sum_kg_log',
+                    'export_quantity_sum_log')
+
+
+    columns = df.columns
+   
+    return (df, columns)
 
 def merge_sparks(import_df,export_df,gdp_spark,emissions_spark):
     export_df_min, export_df_max = min_int(export_df, 'year')
