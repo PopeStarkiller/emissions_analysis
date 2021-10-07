@@ -186,49 +186,48 @@ def merged_df(country):
     lower_bound = years_df['min'].max()
     upper_bound = years_df['max'].min()
 
-    gdp_filt = gdp_spark.filter(gdp_spark["year"] >= lower_bound)
-    gdp_filt = gdp_filt.filter(gdp_filt["year"] <= upper_bound)
-    emissions_spark_filt = emissions_spark.filter(emissions_spark["year"] >= lower_bound)
-    emissions_spark_filt = emissions_spark_filt.filter(emissions_spark_filt["year"] <= upper_bound)
-    import_filt = import_df.filter(import_df["year"] >= lower_bound)
-    import_filt = import_filt.filter(import_filt["year"] <= upper_bound)
-    export_filt = export_df.filter(export_df["year"] >= lower_bound)
-    export_filt = export_filt.filter(export_filt["year"] <= upper_bound)
-    merged_df = gdp_filt.join(emissions_spark_filt, gdp_filt.year == emissions_spark_filt.year, 'outer') \
-    .select(gdp_filt.country ,gdp_filt.year,gdp_filt.gdp, emissions_spark_filt.annual_co2_emissions_tonnes) \
+    gdp_spark = gdp_spark.filter(gdp_spark["year"] >= lower_bound)
+    gdp_spark = gdp_spark.filter(gdp_spark["year"] <= upper_bound)
+    emissions_spark = emissions_spark.filter(emissions_spark["year"] >= lower_bound)
+    emissions_spark = emissions_spark.filter(emissions_spark["year"] <= upper_bound)
+    import_df = import_df.filter(import_df["year"] >= lower_bound)
+    import_df = import_df.filter(import_df["year"] <= upper_bound)
+    export_df = export_df.filter(export_df["year"] >= lower_bound)
+    export_df = export_df.filter(export_df["year"] <= upper_bound)
+    merged_df = gdp_spark.join(emissions_spark, gdp_spark.year == emissions_spark.year, 'outer') \
+    .select(gdp_spark.country ,gdp_spark.year,gdp_spark.gdp, emissions_spark.annual_co2_emissions_tonnes) \
     .distinct()
     merged_df = merged_df.orderBy(merged_df.year.asc())
-    import_sum = import_filt.groupBy('year').sum()
+    import_sum = import_df.groupBy('year').sum()
     import_sum = import_sum.orderBy(import_sum.year.asc())
     import_sum = import_sum.withColumnRenamed("sum(trade_usd)","import_trade_sum_usd")
     import_sum = import_sum.withColumnRenamed("sum(weight_kg)","import_weight_sum_kg")
     import_sum = import_sum.withColumnRenamed("sum(quantity)","import_quantity_sum")
-    export_sum = export_filt.groupBy('year').sum()
+    export_sum = export_df.groupBy('year').sum()
     export_sum = export_sum.orderBy(export_sum.year.asc())
     export_sum = export_sum.withColumnRenamed("sum(trade_usd)","export_trade_sum_usd")
     export_sum = export_sum.withColumnRenamed("sum(weight_kg)","export_weight_sum_kg")
     export_sum = export_sum.withColumnRenamed("sum(quantity)","export_quantity_sum")
-    merged_df2 = merged_df.join(import_sum, merged_df.year == import_sum.year, 'outer') \
+    merged_df = merged_df.join(import_sum, merged_df.year == import_sum.year, 'outer') \
     .select(merged_df.country ,merged_df.year,merged_df.gdp, merged_df.annual_co2_emissions_tonnes,
         import_sum['import_trade_sum_usd'],import_sum['import_weight_sum_kg'],import_sum['import_quantity_sum']) \
     .distinct()
-    merged_df2 = merged_df2.orderBy(merged_df2.year.asc())
-    final_merged_spark = merged_df2.join(export_sum, merged_df2.year == export_sum.year, 'outer') \
-    .select(merged_df2.country ,merged_df2.year,merged_df2.gdp, merged_df.annual_co2_emissions_tonnes,
-        merged_df2['import_trade_sum_usd'],merged_df2['import_weight_sum_kg'],merged_df2['import_quantity_sum'],
+    merged_df = merged_df.orderBy(merged_df.year.asc())
+    merged_df = merged_df.join(export_sum, merged_df.year == export_sum.year, 'outer') \
+    .select(merged_df.country ,merged_df.year,merged_df.gdp, merged_df.annual_co2_emissions_tonnes,
+        merged_df['import_trade_sum_usd'],merged_df['import_weight_sum_kg'],merged_df['import_quantity_sum'],
         export_sum['export_trade_sum_usd'],export_sum['export_weight_sum_kg'],export_sum['export_quantity_sum']
         ) \
     .distinct()
-    final_merged_spark = final_merged_spark.orderBy(final_merged_spark.year.asc())
-    df = final_merged_spark
-    df = df.withColumn("annual_co2_emissions_tonnes_log", F.log10(col("annual_co2_emissions_tonnes")))
-    df = df.withColumn("import_trade_sum_usd_log", F.log10(col("import_trade_sum_usd")))
-    df = df.withColumn("import_weight_sum_kg_log", F.log10(col("import_weight_sum_kg")))
-    df = df.withColumn("import_quantity_sum_log", F.log10(col("import_quantity_sum")))
-    df = df.withColumn("export_trade_sum_usd_log", F.log10(col("export_trade_sum_usd")))
-    df = df.withColumn("export_weight_sum_kg_log", F.log10(col("export_weight_sum_kg")))
-    df = df.withColumn("export_quantity_sum_log", F.log10(col("export_quantity_sum")))
-    df = df.select('country',
+    merged_df = merged_df.orderBy(merged_df.year.asc())
+    merged_df = merged_df.withColumn("annual_co2_emissions_tonnes_log", F.log10(col("annual_co2_emissions_tonnes")))
+    merged_df = merged_df.withColumn("import_trade_sum_usd_log", F.log10(col("import_trade_sum_usd")))
+    merged_df = merged_df.withColumn("import_weight_sum_kg_log", F.log10(col("import_weight_sum_kg")))
+    merged_df = merged_df.withColumn("import_quantity_sum_log", F.log10(col("import_quantity_sum")))
+    merged_df = merged_df.withColumn("export_trade_sum_usd_log", F.log10(col("export_trade_sum_usd")))
+    merged_df = merged_df.withColumn("export_weight_sum_kg_log", F.log10(col("export_weight_sum_kg")))
+    merged_df = merged_df.withColumn("export_quantity_sum_log", F.log10(col("export_quantity_sum")))
+    merged_df = merged_df.select('country',
                     'year',
                     'gdp',
                     'annual_co2_emissions_tonnes_log',
@@ -240,9 +239,9 @@ def merged_df(country):
                     'export_quantity_sum_log')
 
 
-    columns = df.columns
+    columns = merged_df.columns
    
-    return (df, columns)
+    return (merged_df, columns)
 
 def merge_sparks(import_df,export_df,gdp_spark,emissions_spark):
     export_df_min, export_df_max = min_int(export_df, 'year')
@@ -260,38 +259,38 @@ def merge_sparks(import_df,export_df,gdp_spark,emissions_spark):
     lower_bound = years_df['min'].max()
     upper_bound = years_df['max'].min()
 
-    gdp_filt = gdp_spark.filter(gdp_spark["year"] >= lower_bound)
-    gdp_filt = gdp_filt.filter(gdp_filt["year"] <= upper_bound)
-    emissions_spark_filt = emissions_spark.filter(emissions_spark["year"] >= lower_bound)
-    emissions_spark_filt = emissions_spark_filt.filter(emissions_spark_filt["year"] <= upper_bound)
-    import_filt = import_df.filter(import_df["year"] >= lower_bound)
-    import_filt = import_filt.filter(import_filt["year"] <= upper_bound)
-    export_filt = export_df.filter(export_df["year"] >= lower_bound)
-    export_filt = export_filt.filter(export_filt["year"] <= upper_bound)
-    merged_df = gdp_filt.join(emissions_spark_filt, gdp_filt.year == emissions_spark_filt.year, 'outer') \
-    .select(gdp_filt.country ,gdp_filt.year,gdp_filt.gdp, emissions_spark_filt.annual_co2_emissions_tonnes) \
+    gdp_spark = gdp_spark.filter(gdp_spark["year"] >= lower_bound)
+    gdp_spark = gdp_spark.filter(gdp_spark["year"] <= upper_bound)
+    emissions_spark = emissions_spark.filter(emissions_spark["year"] >= lower_bound)
+    emissions_spark = emissions_spark.filter(emissions_spark["year"] <= upper_bound)
+    import_df = import_df.filter(import_df["year"] >= lower_bound)
+    import_df = import_df.filter(import_df["year"] <= upper_bound)
+    export_df = export_df.filter(export_df["year"] >= lower_bound)
+    export_df = export_df.filter(export_df["year"] <= upper_bound)
+    merged_df = gdp_spark.join(emissions_spark, gdp_spark.year == emissions_spark.year, 'outer') \
+    .select(gdp_spark.country ,gdp_spark.year,gdp_spark.gdp, emissions_spark.annual_co2_emissions_tonnes) \
     .distinct()
     merged_df = merged_df.orderBy(merged_df.year.asc())
-    import_sum = import_filt.groupBy('year').sum()
+    import_sum = import_df.groupBy('year').sum()
     import_sum = import_sum.orderBy(import_sum.year.asc())
     import_sum = import_sum.withColumnRenamed("sum(trade_usd)","import_trade_sum_usd")
     import_sum = import_sum.withColumnRenamed("sum(weight_kg)","import_weight_sum_kg")
     import_sum = import_sum.withColumnRenamed("sum(quantity)","import_quantity_sum")
-    export_sum = export_filt.groupBy('year').sum()
+    export_sum = export_df.groupBy('year').sum()
     export_sum = export_sum.orderBy(export_sum.year.asc())
     export_sum = export_sum.withColumnRenamed("sum(trade_usd)","export_trade_sum_usd")
     export_sum = export_sum.withColumnRenamed("sum(weight_kg)","export_weight_sum_kg")
     export_sum = export_sum.withColumnRenamed("sum(quantity)","export_quantity_sum")
-    merged_df2 = merged_df.join(import_sum, merged_df.year == import_sum.year, 'outer') \
+    merged_df = merged_df.join(import_sum, merged_df.year == import_sum.year, 'outer') \
     .select(merged_df.country ,merged_df.year,merged_df.gdp, merged_df.annual_co2_emissions_tonnes,
         import_sum['import_trade_sum_usd'],import_sum['import_weight_sum_kg'],import_sum['import_quantity_sum']) \
     .distinct()
-    merged_df2 = merged_df2.orderBy(merged_df2.year.asc())
-    final_merged_spark = merged_df2.join(export_sum, merged_df2.year == export_sum.year, 'outer') \
-    .select(merged_df2.country ,merged_df2.year,merged_df2.gdp, merged_df.annual_co2_emissions_tonnes,
-        merged_df2['import_trade_sum_usd'],merged_df2['import_weight_sum_kg'],merged_df2['import_quantity_sum'],
+    merged_df = merged_df.orderBy(merged_df.year.asc())
+    merged_df = merged_df.join(export_sum, merged_df.year == export_sum.year, 'outer') \
+    .select(merged_df.country ,merged_df.year,merged_df.gdp, merged_df.annual_co2_emissions_tonnes,
+        merged_df['import_trade_sum_usd'],merged_df['import_weight_sum_kg'],merged_df['import_quantity_sum'],
         export_sum['export_trade_sum_usd'],export_sum['export_weight_sum_kg'],export_sum['export_quantity_sum']
         ) \
     .distinct()
-    final_merged_spark = final_merged_spark.orderBy(final_merged_spark.year.asc())
-    return final_merged_spark
+    merged_df = merged_df.orderBy(merged_df.year.asc())
+    return merged_df
