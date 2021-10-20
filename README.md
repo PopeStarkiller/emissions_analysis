@@ -87,7 +87,7 @@ The predictions are made for each country's data. It makes no sense to do it for
 multiple values for the same year that are not sequential for the data. So, looking at each country and each column dataframes
 and models get created for every prediction. These are broke up into the yhat, yhat_lower, yhat_upper categories.
 These categories represent the boundry regions and their mean for the model's predictions. The number of predictions is 
-determined by your input and the number represent years in the future to be predicted.
+determined by your input and the number represent years in the future to be predicted.                                   
 ![Screenshot of vps](https://github.com/PopeStarkiller/emissions_analysis/blob/main/static/images/prophets.PNG?raw=true)
 
 After creating the models and their predictions, the dataframes are treated as values to be plugged in to the tensorflow
